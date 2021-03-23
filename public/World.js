@@ -23,7 +23,7 @@ class World {
 
 	// Основные методы
 	async start({ map } = {}) {
-		this.player = new Tank({ speed: 3, level: 4 })
+		this.player = new Tank({ speed: 3, level: 3 })
 		await this.player.create(192, 576)
 		this.map = await createMap(map)
 		this.#installHandlers()

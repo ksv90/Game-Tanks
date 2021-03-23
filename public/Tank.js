@@ -49,8 +49,8 @@ class Tank {
 		}
 	}
 
-	async create(x = 100, y = 100, level = 0) {
-		this.level = level
+	async create(x = 100, y = 100, level) {
+		this.level = level ?? this.#lvl
 		this.props = {
 			x,
 			y,
@@ -70,6 +70,7 @@ class Tank {
 
 	draw() {
 		const { g, w, h, x, y, size } = this.#properties
+		console.log(this.#lvl)
 		return [this.#img, g, this.#lvl, w, h, x, y, size, size]
 	}
 
