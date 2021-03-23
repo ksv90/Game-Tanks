@@ -70,7 +70,6 @@ class Tank {
 
 	draw() {
 		const { g, w, h, x, y, size } = this.#properties
-		console.log(this.#lvl)
 		return [this.#img, g, this.#lvl, w, h, x, y, size, size]
 	}
 
