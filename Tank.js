@@ -37,7 +37,7 @@ class Tank {
 	}
 
 	get props() {
-		const { x, y, size } = this.#properties
+		const { x, y, size, direction } = this.#properties
 		return {
 			x1: x,
 			x2: x + size,
@@ -45,6 +45,7 @@ class Tank {
 			y2: y + size,
 			width: size,
 			height: size,
+			direction,
 		}
 	}
 
@@ -53,6 +54,7 @@ class Tank {
 		this.props = {
 			x,
 			y,
+			direction: 'up',
 		}
 		this.#img = await this.#img
 		return this
@@ -80,6 +82,7 @@ class Tank {
 			h: 47,
 			x,
 			y,
+			direction: 'up',
 		}
 	}
 
@@ -92,6 +95,7 @@ class Tank {
 			h: 47,
 			x,
 			y,
+			direction: 'down',
 		}
 	}
 
@@ -104,6 +108,7 @@ class Tank {
 			h: 45,
 			x,
 			y,
+			direction: 'left',
 		}
 	}
 
@@ -116,6 +121,7 @@ class Tank {
 			h: 45,
 			x,
 			y,
+			direction: 'right',
 		}
 	}
 }

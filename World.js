@@ -1,4 +1,5 @@
 import Tank from './Tank.js'
+import Shell from './Shell.js'
 import createMap from './Map.js'
 
 class World {
@@ -6,12 +7,15 @@ class World {
 		this.canvas = canvas
 		this.ctx = ctx
 		this.motionKey = null
+		this.shells = []
 
 		const rowSize = canvas.width / 13
 		const positionSize = canvas.width - rowSize
 		this.props = {
 			size: positionSize / 24,
 			speed: 3,
+			toShoot: true,
+			timeShoot: 800,
 		}
 
 		this.close = this.close.bind(this)
@@ -30,6 +34,10 @@ class World {
 		this.clear()
 		this.movementHandler()
 		this.draw()
+		if (this.shells)
+			this.shells = this.shells.filter(shell => {
+				return !this.shellsMove(shell)
+			})
 		requestAnimationFrame(this.update.bind(this))
 	}
 
@@ -41,6 +49,10 @@ class World {
 		this.map.forEach(line =>
 			line.forEach(block => block && this.ctx.drawImage(...block.draw()))
 		)
+		if (this.shells)
+			this.shells.forEach(shell => {
+				this.ctx.drawImage(...shell.draw())
+			})
 		this.ctx.drawImage(...this.player.draw())
 	}
 
@@ -113,6 +125,34 @@ class World {
 		tank.left(x1 - speed, pos * size)
 	}
 
+	// Стрельба
+	shellsMove(shell) {
+		const { x, y, direction } = shell.props
+		let { speed } = this.props
+		speed *= 1.3
+		if (x < 0 || x > this.canvas.width || y < 0 || y > this.canvas.height)
+			return true
+		if (direction === 'up') return shell.chengePosition(x, y - speed)
+		if (direction === 'down') return shell.chengePosition(x, y + speed)
+		if (direction === 'left') return shell.chengePosition(x - speed, y)
+		if (direction === 'right') return shell.chengePosition(x + speed, y)
+	}
+
+	async shoot() {
+		const { toShoot, timeShoot } = this.props
+		if (!toShoot) return
+		setTimeout(() => {
+			this.props.toShoot = true
+		}, timeShoot)
+		this.props.toShoot = false
+		const { x1, y1, width, height, direction } = this.player.props
+		const shell = await new Shell(direction).create(
+			x1 + width / 4,
+			y1 + height / 4
+		)
+		this.shells.push(shell)
+	}
+
 	// Дополнительные методы
 	movementHandler() {
 		switch (this.motionKey) {
@@ -129,7 +169,8 @@ class World {
 	#installHandlers() {
 		document.addEventListener('keydown', ({ code }) => {
 			const key = getMotionKey(code, motion1)
-			if (!key || this.motionKey === key) return
+			if (!key && code === 'Space') return this.shoot()
+			if (this.motionKey === key) return
 			this.motionKey = key
 		})
 
