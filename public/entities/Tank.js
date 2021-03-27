@@ -1,16 +1,15 @@
-import getSprite from './Sprite.js'
-import getWorld from './World.js'
+import getWorld from '../World.js'
+import Shell from './Shell.js'
+import Essence from './Essence.js'
 
-class Tank {
-	#img = null
+class Tank extends Essence {
 	#lvl = 0
-	#properties = {}
 
-	constructor(options = {}) {
-		this.#img = getSprite('./Спрайт.png')
-		this.level = options.level ?? 0
+	constructor({ sprite, level, size: sz, speed }) {
+		super(sprite)
+		this.level = level ?? 0
 		const world = getWorld().canvas
-		const s = options.size ?? world.width / 13
+		const s = sz ?? world.width / 13
 		const size = world.width - s
 		this.world = {
 			size,
@@ -19,45 +18,25 @@ class Tank {
 		this.props = {
 			frame: true,
 			g: 0,
-			w: 45,
-			h: 47,
-			speed: options.speed ?? 3,
+			width: 45,
+			height: 47,
+			speed: speed ?? 3,
 			size: s,
+			toShoot: true,
+			timeShoot: 800,
 		}
 	}
 
-	/**
-	 * @param {object} props
-	 */
-	set props(props) {
-		this.#properties = {
-			...this.#properties,
-			...props,
-		}
-	}
-
-	get props() {
-		const { x, y, size, direction } = this.#properties
-		return {
-			x1: x,
-			x2: x + size,
-			y1: y,
-			y2: y + size,
-			width: size,
-			height: size,
-			direction,
-		}
-	}
-
-	async create(x = 100, y = 100, level) {
+	//Основные методы
+	create(x = 100, y = 100, level = 1) {
 		this.level = level ?? this.#lvl
-		this.props = {
-			x,
-			y,
-			direction: 'up',
-		}
-		this.#img = await this.#img
+		this.up(x, y)
 		return this
+	}
+
+	draw() {
+		const { g, width, height, x1, y1, size } = this.props
+		return [this.sprite, g, this.#lvl, width, height, x1, y1, size, size]
 	}
 
 	/**
@@ -68,18 +47,14 @@ class Tank {
 		this.#lvl = level * 48
 	}
 
-	draw() {
-		const { g, w, h, x, y, size } = this.#properties
-		return [this.#img, g, this.#lvl, w, h, x, y, size, size]
-	}
-
+	// Направление танка
 	up(x, y) {
-		const { frame } = this.#properties
+		const { frame } = this.props
 		this.props = {
 			frame: !frame,
 			g: frame ? 48 * 0 : 48 * 1,
-			w: 45,
-			h: 47,
+			width: 45,
+			height: 47,
 			x,
 			y,
 			direction: 'up',
@@ -87,12 +62,12 @@ class Tank {
 	}
 
 	down(x, y) {
-		const { frame } = this.#properties
+		const { frame } = this.props
 		this.props = {
 			frame: !frame,
 			g: frame ? 48 * 4 : 48 * 5,
-			w: 45,
-			h: 47,
+			width: 45,
+			height: 47,
 			x,
 			y,
 			direction: 'down',
@@ -100,12 +75,12 @@ class Tank {
 	}
 
 	left(x, y) {
-		const { frame } = this.#properties
+		const { frame } = this.props
 		this.props = {
 			frame: !frame,
 			g: frame ? 48 * 2 : 48 * 3,
-			w: 48,
-			h: 45,
+			width: 48,
+			height: 45,
 			x,
 			y,
 			direction: 'left',
@@ -113,16 +88,32 @@ class Tank {
 	}
 
 	right(x, y) {
-		const { frame } = this.#properties
+		const { frame } = this.props
 		this.props = {
 			frame: !frame,
 			g: frame ? 48 * 6 : 48 * 7,
-			w: 48,
-			h: 45,
+			width: 47,
+			height: 45,
 			x,
 			y,
 			direction: 'right',
 		}
+	}
+
+	// Стрельба
+	shoot() {
+		const { x1, y1, width, height, direction, toShoot, timeShoot } = this.props
+		if (!toShoot) return null
+		setTimeout(() => {
+			this.props = { toShoot: true }
+		}, timeShoot)
+		this.props = { toShoot: false }
+		return new Shell({
+			direction,
+			sprite: this.sprite,
+			x: x1 + width / 4,
+			y: y1 + height / 4,
+		})
 	}
 }
 

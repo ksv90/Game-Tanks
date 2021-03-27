@@ -1,6 +1,7 @@
-import Tank from './Tank.js'
-import Shell from './Shell.js'
+import Tank from './entities/Tank.js'
+import Explosion from './entities/Explosion.js'
 import createMap from './Map.js'
+import getSprite from './Sprite.js'
 
 class World {
 	constructor(canvas, ctx) {
@@ -8,14 +9,13 @@ class World {
 		this.ctx = ctx
 		this.motionKey = null
 		this.shells = []
+		this.explosions = []
 
 		const rowSize = canvas.width / 13
 		const positionSize = canvas.width - rowSize
 		this.props = {
 			size: positionSize / 24,
 			speed: 3,
-			toShoot: true,
-			timeShoot: 800,
 		}
 
 		this.close = this.close.bind(this)
@@ -23,9 +23,10 @@ class World {
 
 	// Основные методы
 	async start({ map } = {}) {
-		this.player = new Tank({ speed: 3, level: 3 })
-		await this.player.create(192, 576)
-		this.map = await createMap(map)
+		const sprite = (this.sprite = await getSprite('./Спрайт.png'))
+		this.player = new Tank({ sprite, speed: 3, level: 0 })
+		this.player.create(192, 576)
+		this.map = await createMap(sprite, map)
 		this.#installHandlers()
 		this.update()
 	}
@@ -34,10 +35,8 @@ class World {
 		this.clear()
 		this.movementHandler()
 		this.draw()
-		if (this.shells)
-			this.shells = this.shells.filter(shell => {
-				return !this.shellsMove(shell)
-			})
+		this.shells = this.shells.filter(this.shellsMove.bind(this))
+		this.explosions = this.explosions.filter(explosion => explosion.remove())
 		requestAnimationFrame(this.update.bind(this))
 	}
 
@@ -49,11 +48,15 @@ class World {
 		this.map.forEach(line =>
 			line.forEach(block => block && this.ctx.drawImage(...block.draw()))
 		)
-		if (this.shells)
-			this.shells.forEach(shell => {
-				this.ctx.drawImage(...shell.draw())
-			})
+
+		this.shells.forEach(shell => {
+			this.ctx.drawImage(...shell.draw())
+		})
 		this.ctx.drawImage(...this.player.draw())
+
+		this.explosions.forEach(async explosion => {
+			this.ctx.drawImage(...(await explosion.draw()))
+		})
 	}
 
 	close() {
@@ -127,31 +130,38 @@ class World {
 
 	// Стрельба
 	shellsMove(shell) {
-		const { x, y, direction } = shell.props
-		let { speed } = this.props
-		speed *= 1.3
-		if (x < 0 || x > this.canvas.width || y < 0 || y > this.canvas.height)
-			return true
-		if (direction === 'up') return shell.chengePosition(x, y - speed)
-		if (direction === 'down') return shell.chengePosition(x, y + speed)
-		if (direction === 'left') return shell.chengePosition(x - speed, y)
-		if (direction === 'right') return shell.chengePosition(x + speed, y)
+		const { x1, x2, y1, y2, direction } = shell.props
+		const { speed } = this.props
+		if (x1 < 0 || x2 > this.canvas.width || y1 < 0 || y2 > this.canvas.height) {
+			this.explosions.push(new Explosion(this.sprite, x1, y1))
+			return false
+		}
+		if (direction === 'up' && !this.checkUpDown(x1, x2, y1)) {
+			this.explosions.push(new Explosion(this.sprite, x1, y1))
+			return false
+		}
+		if (direction === 'down' && !this.checkUpDown(x1, x2, y2)) {
+			this.explosions.push(new Explosion(this.sprite, x1, y1))
+			return false
+		}
+		if (direction === 'left' && !this.checkLeftRight(x1, y1, y2)) {
+			this.explosions.push(new Explosion(this.sprite, x1, y1))
+			return false
+		}
+		if (direction === 'right' && !this.checkLeftRight(x2, y1, y2)) {
+			this.explosions.push(new Explosion(this.sprite, x1, y1))
+			return false
+		}
+		return shell.changePosition(speed * 1.3)
 	}
 
-	async shoot() {
-		const { toShoot, timeShoot } = this.props
-		if (!toShoot) return
-		setTimeout(() => {
-			this.props.toShoot = true
-		}, timeShoot)
-		this.props.toShoot = false
-		const { x1, y1, width, height, direction } = this.player.props
-		const shell = await new Shell(direction).create(
-			x1 + width / 4,
-			y1 + height / 4
-		)
-		this.shells.push(shell)
+	shoot() {
+		const shell = this.player.shoot()
+		if (shell) this.shells.push(shell)
 	}
+
+	// Взрыв
+	explosion() {}
 
 	// Дополнительные методы
 	movementHandler() {
